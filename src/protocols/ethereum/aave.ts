@@ -1,5 +1,10 @@
 import axios from 'axios';
 import { ethers } from 'ethers';
+import { requestSignature } from '../../lib/shade-agent';
+
+// Aave V3 Subgraph URL
+const AAVE_V3_SUBGRAPH = 'https://api.thegraph.com/subgraphs/name/aave/protocol-v3';
+const AAVE_DATA_PROVIDER = '0x7B4EB56E7CD4b454BA8ff71E4518426369a138a3'; // Mainnet
 
 export interface AaveYield {
   protocol: string;

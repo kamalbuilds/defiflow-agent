@@ -1,4 +1,8 @@
 import axios from 'axios';
+import { agentCall, agentView } from '../../lib/shade-agent';
+
+// Ref Finance API endpoints
+const REF_INDEXER_API = 'https://api.stats.ref.finance/api';
 
 export interface RefFinanceYield {
   protocol: string;

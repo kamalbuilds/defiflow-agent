@@ -65,7 +65,7 @@ export class EthereumProtocol {
       logger.info('Initializing Ethereum Protocol integration...');
       
       // Initialize ethers provider
-      const rpcUrl = process.env.ETHEREUM_RPC_URL || 'https://mainnet.infura.io/v3/YOUR-PROJECT-ID';
+      const rpcUrl = process.env.ETHEREUM_RPC_URL || 'https://eth-sepolia.g.alchemy.com/v2/EQg9SpbyMVLhZ7QmhA7bJ_U_z9QIIeTQ';
       this.provider = new ethers.JsonRpcProvider(rpcUrl);
 
       // Initialize signer if private key is provided

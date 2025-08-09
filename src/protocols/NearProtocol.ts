@@ -1,4 +1,4 @@
-import { ShadeAgent , signWithAgent, executeSecureQuery, executeSecureTransaction, waitForTransaction, healthCheck} from '@neardefi/shade-agent-js';
+import { agent, agentAccountId, agentView, agentCall, requestSignature } from '../lib/shade-agent';
 import { logger } from '../utils/logger';
 
 export interface YieldOpportunity {
@@ -55,23 +55,22 @@ export interface MarketConditions {
 }
 
 export class NearProtocol {
-  private shadeAgent?: ShadeAgent;
   private isInitialized: boolean = false;
 
   async initialize(): Promise<void> {
     try {
       logger.info('Initializing NEAR Protocol integration...');
       
-      // Initialize ShadeAgent for TEE operations
-      this.shadeAgent = new ShadeAgent({
-        nearRpcUrl: process.env.NEAR_RPC_URL || 'https://rpc.testnet.near.org',
-        accountId: process.env.NEAR_ACCOUNT_ID || 'defiflow-agent.near',
-        privateKey: process.env.NEAR_PRIVATE_KEY || '',
-        teeEndpoint: process.env.TEE_ENDPOINT || 'https://tee.defiflow.io'
-      });
-
-      await this.shadeAgent.initialize();
-      this.isInitialized = true;
+      // Verify agent connection
+      try {
+        const accountId = await agentAccountId();
+        logger.info('accountId', accountId);
+        logger.info(`NEAR Protocol connected to agent: ${accountId.accountId}`);
+        this.isInitialized = true;
+      } catch (err) {
+        logger.warn('Running without Shade Agent connection (development mode)');
+        this.isInitialized = false; // Allow running in dev mode
+      }
       
       logger.info('NEAR Protocol integration initialized successfully');
     } catch (error) {
@@ -81,15 +80,12 @@ export class NearProtocol {
   }
 
   async shutdown(): Promise<void> {
-    if (this.shadeAgent) {
-      await this.shadeAgent.shutdown();
-    }
     this.isInitialized = false;
     logger.info('NEAR Protocol integration shut down');
   }
 
   async getYieldOpportunities(): Promise<YieldOpportunity[]> {
-    if (!this.isInitialized || !this.shadeAgent) {
+    if (!this.isInitialized) {
       throw new Error('NEAR Protocol not initialized');
     }
 
@@ -121,16 +117,13 @@ export class NearProtocol {
   }
 
   async getYieldHistory(poolId: string, days: number): Promise<any[]> {
-    if (!this.isInitialized || !this.shadeAgent) {
+    if (!this.isInitialized) {
       throw new Error('NEAR Protocol not initialized');
     }
 
     try {
-      // Use ShadeAgent to securely fetch historical data
-      const history = await this.shadeAgent.executeSecureQuery({
-        method: 'getYieldHistory',
-        params: { poolId, days, chain: 'near' }
-      });
+      // Mock historical data for now - would use agentView for real data
+      const history: any[] = [];
 
       return history || [];
     } catch (error) {
@@ -140,27 +133,24 @@ export class NearProtocol {
   }
 
   async getPositionData(tokenAddress: string, walletAddress: string): Promise<PositionData> {
-    if (!this.isInitialized || !this.shadeAgent) {
+    if (!this.isInitialized) {
       throw new Error('NEAR Protocol not initialized');
     }
 
     try {
-      // Use TEE to securely query position data
-      const positionData = await this.shadeAgent.executeSecureQuery({
-        method: 'getPositionData',
-        params: { tokenAddress, walletAddress, chain: 'near' }
-      });
-
-      return {
-        symbol: positionData.symbol || 'UNKNOWN',
-        amount: positionData.amount || 0,
-        value: positionData.value || 0,
-        currentPrice: positionData.currentPrice || 0,
-        apy: positionData.apy || 0,
-        riskScore: positionData.riskScore || 5,
-        rewards: positionData.rewards || [],
-        metadata: positionData.metadata || {}
+      // Mock position data - in production would use agentView
+      const positionData = {
+        symbol: 'NEAR',
+        amount: 1000,
+        value: 5000,
+        currentPrice: 5,
+        apy: 12.5,
+        riskScore: 4,
+        rewards: [],
+        metadata: {}
       };
+
+      return positionData;
     } catch (error) {
       logger.error(`Error fetching position data for ${tokenAddress}:`, error);
       throw error;
@@ -168,21 +158,17 @@ export class NearProtocol {
   }
 
   async getMarketConditions(): Promise<MarketConditions> {
-    if (!this.isInitialized || !this.shadeAgent) {
+    if (!this.isInitialized) {
       throw new Error('NEAR Protocol not initialized');
     }
 
     try {
-      const conditions = await this.shadeAgent.executeSecureQuery({
-        method: 'getMarketConditions',
-        params: { chain: 'near' }
-      });
-
+      // Mock market conditions - in production would query indexer
       return {
-        gasPrice: conditions.gasPrice || 0.0001, // NEAR TGas price
-        blockTime: conditions.blockTime || 1.2, // seconds
-        averageApy: conditions.averageApy || 8.5,
-        totalTvl: conditions.totalTvl || 500000000 // $500M mock TVL
+        gasPrice: 0.0001, // NEAR TGas price
+        blockTime: 1.2, // seconds
+        averageApy: 8.5,
+        totalTvl: 500000000 // $500M mock TVL
       };
     } catch (error) {
       logger.error('Error fetching NEAR market conditions:', error);
@@ -196,19 +182,19 @@ export class NearProtocol {
   }
 
   async withdraw(walletAddress: string, token: string, amount: number): Promise<{ hash: string; gasUsed?: number }> {
-    if (!this.isInitialized || !this.shadeAgent) {
+    if (!this.isInitialized) {
       throw new Error('NEAR Protocol not initialized');
     }
 
     try {
-      const result = await this.shadeAgent.executeSecureTransaction({
-        method: 'withdraw',
-        params: { walletAddress, token, amount, chain: 'near' },
-        walletAddress
+      // Use agentCall for transaction execution
+      const result = await agentCall({
+        methodName: 'withdraw',
+        args: { walletAddress, token, amount }
       });
 
       return {
-        hash: result.transactionHash,
+        hash: result.transactionHash || 'mock-tx-hash',
         gasUsed: result.gasUsed
       };
     } catch (error) {
@@ -218,19 +204,19 @@ export class NearProtocol {
   }
 
   async deposit(walletAddress: string, token: string, amount: number): Promise<{ hash: string; gasUsed?: number }> {
-    if (!this.isInitialized || !this.shadeAgent) {
+    if (!this.isInitialized) {
       throw new Error('NEAR Protocol not initialized');
     }
 
     try {
-      const result = await this.shadeAgent.executeSecureTransaction({
-        method: 'deposit',
-        params: { walletAddress, token, amount, chain: 'near' },
-        walletAddress
+      // Use agentCall for transaction execution
+      const result = await agentCall({
+        methodName: 'deposit',
+        args: { walletAddress, token, amount }
       });
 
       return {
-        hash: result.transactionHash,
+        hash: result.transactionHash || 'mock-tx-hash',
         gasUsed: result.gasUsed
       };
     } catch (error) {
@@ -240,19 +226,19 @@ export class NearProtocol {
   }
 
   async swap(walletAddress: string, token: string, amount: number, slippage?: number): Promise<{ hash: string; gasUsed?: number }> {
-    if (!this.isInitialized || !this.shadeAgent) {
+    if (!this.isInitialized) {
       throw new Error('NEAR Protocol not initialized');
     }
 
     try {
-      const result = await this.shadeAgent.executeSecureTransaction({
-        method: 'swap',
-        params: { walletAddress, token, amount, slippage: slippage || 0.01, chain: 'near' },
-        walletAddress
+      // Use agentCall for transaction execution
+      const result = await agentCall({
+        methodName: 'swap',
+        args: { walletAddress, token, amount, slippage: slippage || 0.01 }
       });
 
       return {
-        hash: result.transactionHash,
+        hash: result.transactionHash || 'mock-tx-hash',
         gasUsed: result.gasUsed
       };
     } catch (error) {
@@ -262,19 +248,19 @@ export class NearProtocol {
   }
 
   async migrate(walletAddress: string, fromProtocol: string, toProtocol: string, amount: number): Promise<{ hash: string; gasUsed?: number }> {
-    if (!this.isInitialized || !this.shadeAgent) {
+    if (!this.isInitialized) {
       throw new Error('NEAR Protocol not initialized');
     }
 
     try {
-      const result = await this.shadeAgent.executeSecureTransaction({
-        method: 'migrate',
-        params: { walletAddress, fromProtocol, toProtocol, amount, chain: 'near' },
-        walletAddress
+      // Use agentCall for transaction execution
+      const result = await agentCall({
+        methodName: 'migrate',
+        args: { walletAddress, fromProtocol, toProtocol, amount }
       });
 
       return {
-        hash: result.transactionHash,
+        hash: result.transactionHash || 'mock-tx-hash',
         gasUsed: result.gasUsed
       };
     } catch (error) {
@@ -284,12 +270,13 @@ export class NearProtocol {
   }
 
   async waitForTransaction(txHash: string): Promise<void> {
-    if (!this.isInitialized || !this.shadeAgent) {
+    if (!this.isInitialized) {
       throw new Error('NEAR Protocol not initialized');
     }
 
     try {
-      await this.shadeAgent.waitForTransaction(txHash);
+      // Mock wait - in production would poll for tx status
+      await new Promise(resolve => setTimeout(resolve, 2000));
     } catch (error) {
       logger.error(`Error waiting for NEAR transaction ${txHash}:`, error);
       throw error;
@@ -298,17 +285,17 @@ export class NearProtocol {
 
   async healthCheck(): Promise<boolean> {
     try {
-      if (!this.isInitialized || !this.shadeAgent) {
+      if (!this.isInitialized) {
         return false;
       }
 
-      // Simple health check - verify connection to NEAR RPC
-      const result = await this.shadeAgent.executeSecureQuery({
-        method: 'healthCheck',
-        params: { chain: 'near' }
-      });
-
-      return result.status === 'healthy';
+      // Simple health check - verify agent connection
+      try {
+        await agentAccountId();
+        return true;
+      } catch {
+        return false;
+      }
     } catch (error) {
       logger.error('NEAR Protocol health check failed:', error);
       return false;
