@@ -1,7 +1,8 @@
 import { Hono } from 'hono';
 import { RebalancingService } from '../services/RebalancingService';
+import type { AppBindings } from '../types/hono';
 
-const rebalanceRoutes = new Hono();
+const rebalanceRoutes = new Hono<AppBindings>();
 
 // Get rebalancing recommendations for a wallet
 rebalanceRoutes.get('/recommendations/:walletAddress', async (c) => {

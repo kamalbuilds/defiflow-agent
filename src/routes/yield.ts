@@ -1,7 +1,8 @@
 import { Hono } from 'hono';
 import { YieldMonitoringService } from '../services/YieldMonitoringService';
+import type { AppBindings } from '../types/hono';
 
-const yieldRoutes = new Hono();
+const yieldRoutes = new Hono<AppBindings>();
 
 // Get all yield opportunities across supported protocols
 yieldRoutes.get('/opportunities', async (c) => {

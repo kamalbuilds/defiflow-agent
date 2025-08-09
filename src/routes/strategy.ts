@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
+import type { AppBindings } from '../types/hono';
 
-const app = new Hono();
+const app = new Hono<AppBindings>();
 
 interface StrategyConfig {
   name: string;

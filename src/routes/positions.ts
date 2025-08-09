@@ -1,7 +1,8 @@
 import { Hono } from 'hono';
 import { PositionTrackingService } from '../services/PositionTrackingService';
+import type { AppBindings } from '../types/hono';
 
-const positionsRoutes = new Hono();
+const positionsRoutes = new Hono<AppBindings>();
 
 // Get all positions for a wallet across chains
 positionsRoutes.get('/:walletAddress', async (c) => {

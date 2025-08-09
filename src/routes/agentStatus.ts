@@ -1,13 +1,20 @@
 import { Hono } from 'hono';
-import { agentAccountId, agent, agentInfo } from '@neardefi/shade-agent-js';
+import { agentAccountId, agent, agentInfo, getAgentBalance, getAgentState } from '../lib/shade-agent';
 
-const app = new Hono();
+import type { AppBindings } from '../types/hono';
 
-app.get('/status', async (c) => {
+const agentStatusRoutes = new Hono<AppBindings>();
+
+agentStatusRoutes.get('/status', async (c) => {
   try {
     const accountId = await agentAccountId();
-    const balance = await agent('getBalance');
+
+    console.log('accountId', accountId);
+
+    const balance = await getAgentBalance();
+    console.log('balance', balance);
     const info = await agentInfo();
+    console.log('info', info);
     
     return c.json({
       status: 'active',
@@ -23,12 +30,13 @@ app.get('/status', async (c) => {
   }
 });
 
-app.get('/accounts', async (c) => {
+agentStatusRoutes.get('/accounts', async (c) => {
   try {
     const nearAccount = await agentAccountId();
     
     // Get derived addresses for different chains
-    const { Evm } = await import('chainsig.js');
+    const chainSig = await import('chainsig.js');
+    const Evm = chainSig.default.evm.EVM;
     const contractId = process.env.CONTRACT_ID || `ac-proxy.${process.env.NEAR_ACCOUNT_ID}`;
     
     const { address: ethAddress } = await Evm.deriveAddressAndPublicKey(
@@ -70,4 +78,4 @@ app.get('/accounts', async (c) => {
   }
 });
 
-export { app as agentStatus };
+export { agentStatusRoutes };

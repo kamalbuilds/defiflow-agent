@@ -4,8 +4,9 @@ import { fetchUniswapV3Yields } from '../protocols/ethereum/uniswap';
 import { fetchAaveYields } from '../protocols/ethereum/aave';
 import { fetchRefFinanceYields } from '../protocols/near/ref';
 import { fetchBurrowYields } from '../protocols/near/burrow';
+import type { AppBindings } from '../types/hono';
 
-const app = new Hono();
+const app = new Hono<AppBindings>();
 
 interface YieldData {
   protocol: string;
