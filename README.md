@@ -1,6 +1,6 @@
 # DeFiFlow: Autonomous Cross-Chain Yield Optimization Agent
 
-## 🏆 NEAR x NYC Hackathon Submission
+## 🏆 Fork that Near Hackathon Submission
 
 DeFiFlow is a decentralized, verifiable AI agent that autonomously optimizes yield across multiple blockchains using NEAR's Shade Agent Framework.
 
