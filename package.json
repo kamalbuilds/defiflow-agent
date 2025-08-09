@@ -1,0 +1,63 @@
+{
+  "name": "defiflow-agent",
+  "version": "1.0.0",
+  "description": "TEE-based yield optimization agent for cross-chain DeFi position monitoring and rebalancing",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "dev:watch": "tsx watch src/index.ts",
+    "clean": "rm -rf dist",
+    "rebuild": "npm run clean && npm run build",
+    "type-check": "tsc --noEmit",
+    "lint": "echo \"Linting not configured yet\"",
+    "test": "echo \"Tests not configured yet\"",
+    "docker:build": "docker build -t defiflow-agent .",
+    "docker:run": "docker run -p 3000:3000 --env-file .env defiflow-agent",
+    "docker:compose:up": "docker-compose up -d",
+    "docker:compose:down": "docker-compose down",
+    "docker:compose:logs": "docker-compose logs -f",
+    "db:migrate": "echo \"Database migrations not configured yet\"",
+    "db:seed": "echo \"Database seeding not configured yet\"",
+    "health": "node healthcheck.js"
+  },
+  "keywords": [
+    "defi",
+    "yield-optimization",
+    "near",
+    "ethereum",
+    "tee",
+    "blockchain",
+    "rebalancing",
+    "agent"
+  ],
+  "author": "DeFiFlow Team",
+  "license": "MIT",
+  "dependencies": {
+    "@neardefi/shade-agent-js": "^1.0.4",
+    "@types/node": "^24.2.0",
+    "axios": "^1.11.0",
+    "chainsig.js": "^1.1.11",
+    "dotenv": "^17.2.1",
+    "ethers": "^6.15.0",
+    "hono": "^4.8.12",
+    "tsx": "^4.20.3",
+    "typescript": "^5.9.2"
+  },
+  "devDependencies": {
+    "@hono/node-server": "^1.18.1"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/defiflow/defiflow-agent"
+  },
+  "bugs": {
+    "url": "https://github.com/defiflow/defiflow-agent/issues"
+  },
+  "homepage": "https://github.com/defiflow/defiflow-agent#readme"
+}
