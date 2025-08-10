@@ -1,6 +1,8 @@
 import { EventEmitter } from 'events';
 import { NearProtocol } from '../protocols/NearProtocol';
 import { EthereumProtocol } from '../protocols/EthereumProtocol';
+import { BSCProtocol } from '../protocols/BSCProtocol';
+import { PolygonProtocol } from '../protocols/PolygonProtocol';
 import { YieldMonitoringService } from './YieldMonitoringService';
 import { PositionTrackingService } from './PositionTrackingService';
 import { logger } from '../utils/logger';
@@ -119,6 +121,8 @@ export interface AutoRebalanceSettings {
 export class RebalancingService extends EventEmitter {
   private nearProtocol: NearProtocol;
   private ethereumProtocol: EthereumProtocol;
+  private bscProtocol: BSCProtocol;
+  private polygonProtocol: PolygonProtocol;
   private yieldService: YieldMonitoringService;
   private positionService: PositionTrackingService;
   private cache: CacheManager;
@@ -130,6 +134,8 @@ export class RebalancingService extends EventEmitter {
     super();
     this.nearProtocol = new NearProtocol();
     this.ethereumProtocol = new EthereumProtocol();
+    this.bscProtocol = new BSCProtocol();
+    this.polygonProtocol = new PolygonProtocol();
     this.yieldService = new YieldMonitoringService();
     this.positionService = new PositionTrackingService();
     this.cache = new CacheManager('rebalancing');
@@ -141,6 +147,8 @@ export class RebalancingService extends EventEmitter {
       
       await this.nearProtocol.initialize();
       await this.ethereumProtocol.initialize();
+      await this.bscProtocol.initialize();
+      await this.polygonProtocol.initialize();
       
       // Load auto-rebalance settings
       await this.loadAutoRebalanceSettings();
@@ -162,6 +170,8 @@ export class RebalancingService extends EventEmitter {
     
     await this.nearProtocol.shutdown();
     await this.ethereumProtocol.shutdown();
+    await this.bscProtocol.shutdown();
+    await this.polygonProtocol.shutdown();
     
     logger.info('Rebalancing Service shut down');
   }
@@ -254,7 +264,7 @@ export class RebalancingService extends EventEmitter {
         });
         
         // Wait for confirmation
-        await this.waitForConfirmation(txResult.hash, action.toChain as 'near' | 'ethereum');
+        await this.waitForConfirmation(txResult.hash, action.toChain as 'near' | 'ethereum' | 'bsc' | 'polygon');
         
         // Update transaction status
         const txIndex = execution.transactions.length - 1;
@@ -686,7 +696,7 @@ export class RebalancingService extends EventEmitter {
     slippage?: number,
     gasPrice?: number
   ): Promise<{ hash: string; gasUsed?: number }> {
-    const protocolHandler = action.toChain === 'near' ? this.nearProtocol : this.ethereumProtocol;
+    const protocolHandler = this.getProtocolHandler(action.toChain);
     
     switch (action.type) {
       case 'withdraw':
@@ -702,9 +712,24 @@ export class RebalancingService extends EventEmitter {
     }
   }
 
-  private async waitForConfirmation(txHash: string, chain: 'near' | 'ethereum'): Promise<void> {
-    const protocolHandler = chain === 'near' ? this.nearProtocol : this.ethereumProtocol;
+  private async waitForConfirmation(txHash: string, chain: 'near' | 'ethereum' | 'bsc' | 'polygon'): Promise<void> {
+    const protocolHandler = this.getProtocolHandler(chain);
     return await protocolHandler.waitForTransaction(txHash);
+  }
+
+  private getProtocolHandler(chain: string): any {
+    switch (chain) {
+      case 'near':
+        return this.nearProtocol;
+      case 'ethereum':
+        return this.ethereumProtocol;
+      case 'bsc':
+        return this.bscProtocol;
+      case 'polygon':
+        return this.polygonProtocol;
+      default:
+        throw new Error(`Unsupported chain: ${chain}`);
+    }
   }
 
   private async simulateExecution(config: any): Promise<any> {

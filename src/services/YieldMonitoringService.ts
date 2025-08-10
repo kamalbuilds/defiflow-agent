@@ -1,13 +1,15 @@
 import { EventEmitter } from 'events';
 import { NearProtocol } from '../protocols/NearProtocol';
 import { EthereumProtocol } from '../protocols/EthereumProtocol';
+import { BSCProtocol } from '../protocols/BSCProtocol';
+import { PolygonProtocol } from '../protocols/PolygonProtocol';
 import { logger } from '../utils/logger';
 import { CacheManager } from '../utils/CacheManager';
 
 export interface YieldOpportunity {
   id: string;
   protocol: string;
-  chain: 'near' | 'ethereum';
+  chain: 'near' | 'ethereum' | 'bsc' | 'polygon';
   poolId: string;
   token: string;
   apy: number;
@@ -56,6 +58,18 @@ export interface MarketConditions {
       averageApy: number;
       totalTvl: number;
     };
+    bsc: {
+      gasPrice: number;
+      blockTime: number;
+      averageApy: number;
+      totalTvl: number;
+    };
+    polygon: {
+      gasPrice: number;
+      blockTime: number;
+      averageApy: number;
+      totalTvl: number;
+    };
   };
   defiMetrics: {
     totalValueLocked: number;
@@ -68,6 +82,8 @@ export interface MarketConditions {
 export class YieldMonitoringService extends EventEmitter {
   private nearProtocol: NearProtocol;
   private ethereumProtocol: EthereumProtocol;
+  private bscProtocol: BSCProtocol;
+  private polygonProtocol: PolygonProtocol;
   private cache: CacheManager;
   private monitoringInterval?: NodeJS.Timeout;
   private alerts: Map<string, YieldAlert> = new Map();
@@ -77,6 +93,8 @@ export class YieldMonitoringService extends EventEmitter {
     super();
     this.nearProtocol = new NearProtocol();
     this.ethereumProtocol = new EthereumProtocol();
+    this.bscProtocol = new BSCProtocol();
+    this.polygonProtocol = new PolygonProtocol();
     this.cache = new CacheManager('yield-monitoring');
   }
 
@@ -86,6 +104,8 @@ export class YieldMonitoringService extends EventEmitter {
       
       await this.nearProtocol.initialize();
       await this.ethereumProtocol.initialize();
+      await this.bscProtocol.initialize();
+      await this.polygonProtocol.initialize();
       
       // Load existing alerts from storage
       await this.loadAlerts();
@@ -121,6 +141,8 @@ export class YieldMonitoringService extends EventEmitter {
     
     await this.nearProtocol.shutdown();
     await this.ethereumProtocol.shutdown();
+    await this.bscProtocol.shutdown();
+    await this.polygonProtocol.shutdown();
     
     logger.info('Yield Monitoring Service shut down');
   }
@@ -249,9 +271,11 @@ export class YieldMonitoringService extends EventEmitter {
       return cached;
     }
 
-    const [nearConditions, ethConditions] = await Promise.all([
+    const [nearConditions, ethConditions, bscConditions, polygonConditions] = await Promise.all([
       this.nearProtocol.getMarketConditions(),
-      this.ethereumProtocol.getMarketConditions()
+      this.ethereumProtocol.getMarketConditions(),
+      this.bscProtocol.getMarketConditions(),
+      this.polygonProtocol.getMarketConditions()
     ]);
 
     const opportunities = await this.getYieldOpportunities();
@@ -260,7 +284,9 @@ export class YieldMonitoringService extends EventEmitter {
       timestamp: new Date(),
       chains: {
         near: nearConditions,
-        ethereum: ethConditions
+        ethereum: ethConditions,
+        bsc: bscConditions,
+        polygon: polygonConditions
       },
       defiMetrics: {
         totalValueLocked: opportunities.reduce((sum, op) => sum + op.tvl, 0),
@@ -289,16 +315,18 @@ export class YieldMonitoringService extends EventEmitter {
 
   private async refreshYieldOpportunities(): Promise<void> {
     try {
-      const [nearOpportunities, ethOpportunities] = await Promise.all([
+      const [nearOpportunities, ethOpportunities, bscOpportunities, polygonOpportunities] = await Promise.all([
         this.nearProtocol.getYieldOpportunities(),
-        this.ethereumProtocol.getYieldOpportunities()
+        this.ethereumProtocol.getYieldOpportunities(),
+        this.bscProtocol.getYieldOpportunities(),
+        this.polygonProtocol.getYieldOpportunities()
       ]);
 
       // Clear existing opportunities
       this.opportunities.clear();
 
       // Add new opportunities
-      [...nearOpportunities, ...ethOpportunities].forEach(opportunity => {
+      [...nearOpportunities, ...ethOpportunities, ...bscOpportunities, ...polygonOpportunities].forEach(opportunity => {
         this.opportunities.set(opportunity.id, opportunity);
       });
 

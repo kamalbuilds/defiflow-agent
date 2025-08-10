@@ -6,7 +6,7 @@ import { chainSignatureService, ChainSignatureRequest } from '../lib/chain-signa
 export interface YieldOpportunity {
   id: string;
   protocol: string;
-  chain: 'ethereum';
+  chain: 'polygon';
   poolId: string;
   token: string;
   apy: number;
@@ -56,35 +56,35 @@ export interface MarketConditions {
   totalTvl: number;
 }
 
-export class EthereumProtocol {
+export class PolygonProtocol {
   private provider?: ethers.Provider;
   private signer?: ethers.Signer;
   private isInitialized: boolean = false;
 
   async initialize(): Promise<void> {
     try {
-      logger.info('Initializing Ethereum Protocol integration...');
+      logger.info('Initializing Polygon Protocol integration...');
       
       // Initialize ethers provider
-      const rpcUrl = process.env.ETHEREUM_RPC_URL || 'https://eth-sepolia.g.alchemy.com/v2/EQg9SpbyMVLhZ7QmhA7bJ_U_z9QIIeTQ';
+      const rpcUrl = process.env.POLYGON_RPC_URL || 'https://polygon-mumbai.g.alchemy.com/v2/YOUR-API-KEY';
       this.provider = new ethers.JsonRpcProvider(rpcUrl);
 
       // Initialize signer if private key is provided
-      if (process.env.ETHEREUM_PRIVATE_KEY) {
-        this.signer = new ethers.Wallet(process.env.ETHEREUM_PRIVATE_KEY, this.provider);
+      if (process.env.POLYGON_PRIVATE_KEY) {
+        this.signer = new ethers.Wallet(process.env.POLYGON_PRIVATE_KEY, this.provider);
       }
-
-      // Test connection
-      const network = await this.provider.getNetwork();
-      logger.info(`Connected to Ethereum network: ${network.name} (chainId: ${network.chainId})`);
 
       // Initialize chain signature service
       await chainSignatureService.initialize();
 
+      // Test connection
+      const network = await this.provider.getNetwork();
+      logger.info(`Connected to Polygon network: ${network.name} (chainId: ${network.chainId})`);
+
       this.isInitialized = true;
-      logger.info('Ethereum Protocol integration initialized successfully');
+      logger.info('Polygon Protocol integration initialized successfully');
     } catch (error) {
-      logger.error('Failed to initialize Ethereum Protocol:', error);
+      logger.error('Failed to initialize Polygon Protocol:', error);
       throw error;
     }
   }
@@ -93,66 +93,61 @@ export class EthereumProtocol {
     this.provider = undefined;
     this.signer = undefined;
     this.isInitialized = false;
-    logger.info('Ethereum Protocol integration shut down');
+    logger.info('Polygon Protocol integration shut down');
   }
 
   async getYieldOpportunities(): Promise<YieldOpportunity[]> {
     if (!this.isInitialized || !this.provider) {
-      throw new Error('Ethereum Protocol not initialized');
+      throw new Error('Polygon Protocol not initialized');
     }
 
     try {
       const opportunities: YieldOpportunity[] = [];
 
-      // Aave opportunities
-      const aaveOpportunities = await this.getAaveOpportunities();
+      // QuickSwap opportunities
+      const quickSwapOpportunities = await this.getQuickSwapOpportunities();
+      opportunities.push(...quickSwapOpportunities);
+
+      // Aave Polygon opportunities
+      const aaveOpportunities = await this.getAavePolygonOpportunities();
       opportunities.push(...aaveOpportunities);
 
-      // Compound opportunities
-      const compoundOpportunities = await this.getCompoundOpportunities();
-      opportunities.push(...compoundOpportunities);
-
-      // Uniswap V3 opportunities
-      const uniswapOpportunities = await this.getUniswapOpportunities();
-      opportunities.push(...uniswapOpportunities);
-
-      // Curve opportunities
-      const curveOpportunities = await this.getCurveOpportunities();
+      // Curve Polygon opportunities
+      const curveOpportunities = await this.getCurvePolygonOpportunities();
       opportunities.push(...curveOpportunities);
 
-      // Lido staking opportunities
-      const lidoOpportunities = await this.getLidoOpportunities();
-      opportunities.push(...lidoOpportunities);
+      // QiDao opportunities
+      const qiDaoOpportunities = await this.getQiDaoOpportunities();
+      opportunities.push(...qiDaoOpportunities);
 
-      logger.info(`Found ${opportunities.length} Ethereum yield opportunities`);
+      logger.info(`Found ${opportunities.length} Polygon yield opportunities`);
       return opportunities;
     } catch (error) {
-      logger.error('Error fetching Ethereum yield opportunities:', error);
+      logger.error('Error fetching Polygon yield opportunities:', error);
       return [];
     }
   }
 
   async getYieldHistory(poolId: string, days: number): Promise<any[]> {
     if (!this.isInitialized) {
-      throw new Error('Ethereum Protocol not initialized');
+      throw new Error('Polygon Protocol not initialized');
     }
 
     try {
-      // In a real implementation, fetch from DeFiLlama, The Graph, or directly from protocols
-      // For now, generate mock historical data
+      // Generate mock historical data
       const history = [];
       const now = new Date();
       
       for (let i = days; i >= 0; i--) {
         const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-        const baseApy = 8.5;
-        const randomVariation = (Math.random() - 0.5) * 2; // ±1% variation
+        const baseApy = 10.5;
+        const randomVariation = (Math.random() - 0.5) * 2.5; // ±1.25% variation
         
         history.push({
           date: date.toISOString(),
           apy: Math.max(0, baseApy + randomVariation),
-          tvl: 1000000 + Math.random() * 500000, // Random TVL variation
-          volume24h: Math.random() * 100000
+          tvl: 800000 + Math.random() * 300000, // Random TVL variation
+          volume24h: Math.random() * 80000
         });
       }
 
@@ -165,35 +160,34 @@ export class EthereumProtocol {
 
   async getPositionData(tokenAddress: string, walletAddress: string): Promise<PositionData> {
     if (!this.isInitialized || !this.provider) {
-      throw new Error('Ethereum Protocol not initialized');
+      throw new Error('Polygon Protocol not initialized');
     }
 
     try {
-      // In a real implementation, query multiple DeFi protocols to find positions
-      // For now, return mock data
+      // Mock token data for Polygon
       const mockTokenData = {
         'USDC': { symbol: 'USDC', price: 1.0, decimals: 6 },
-        'ETH': { symbol: 'ETH', price: 2000, decimals: 18 },
+        'MATIC': { symbol: 'MATIC', price: 0.85, decimals: 18 },
         'WETH': { symbol: 'WETH', price: 2000, decimals: 18 },
+        'USDT': { symbol: 'USDT', price: 1.0, decimals: 6 },
         'DAI': { symbol: 'DAI', price: 1.0, decimals: 18 }
       };
 
-      // Try to get token info
-      const tokenInfo = mockTokenData['ETH']; // Default to ETH
-      const balance = Math.random() * 10; // Mock balance
+      const tokenInfo = mockTokenData['MATIC']; // Default to MATIC
+      const balance = Math.random() * 1000; // Mock balance
 
       return {
         symbol: tokenInfo.symbol,
         amount: balance,
         value: balance * tokenInfo.price,
         currentPrice: tokenInfo.price,
-        apy: 5.5 + Math.random() * 10, // 5.5-15.5% APY
+        apy: 7.5 + Math.random() * 12, // 7.5-19.5% APY
         riskScore: Math.floor(Math.random() * 10) + 1,
         rewards: [
           {
-            token: 'COMP',
-            amount: Math.random() * 0.1,
-            value: Math.random() * 50
+            token: 'QUICK',
+            amount: Math.random() * 10,
+            value: Math.random() * 30
           }
         ],
         metadata: {
@@ -210,7 +204,7 @@ export class EthereumProtocol {
 
   async getMarketConditions(): Promise<MarketConditions> {
     if (!this.isInitialized || !this.provider) {
-      throw new Error('Ethereum Protocol not initialized');
+      throw new Error('Polygon Protocol not initialized');
     }
 
     try {
@@ -218,33 +212,32 @@ export class EthereumProtocol {
       const feeData = await this.provider.getFeeData();
       const gasPrice = Number(ethers.formatUnits(feeData.gasPrice || 0, 'gwei'));
 
-      // Mock other market data (in production, fetch from APIs like DeFiLlama)
       return {
         gasPrice,
-        blockTime: 12, // seconds
-        averageApy: 7.2,
-        totalTvl: 50000000000 // $50B mock TVL
+        blockTime: 2, // Polygon has ~2 second block time
+        averageApy: 10.5,
+        totalTvl: 8000000000 // $8B mock TVL
       };
     } catch (error) {
-      logger.error('Error fetching Ethereum market conditions:', error);
+      logger.error('Error fetching Polygon market conditions:', error);
       return {
-        gasPrice: 20, // 20 gwei fallback
-        blockTime: 12,
-        averageApy: 7.2,
-        totalTvl: 50000000000
+        gasPrice: 30, // 30 gwei fallback
+        blockTime: 2,
+        averageApy: 10.5,
+        totalTvl: 8000000000
       };
     }
   }
 
   async withdraw(walletAddress: string, token: string, amount: number): Promise<{ hash: string; gasUsed?: number }> {
     if (!this.isInitialized || !this.signer) {
-      throw new Error('Ethereum Protocol not initialized or no signer available');
+      throw new Error('Polygon Protocol not initialized or no signer available');
     }
 
     try {
       // Use chain signature service for cross-chain withdrawal
       const request: ChainSignatureRequest = {
-        chain: 'ethereum',
+        chain: 'polygon',
         method: 'withdraw',
         params: [walletAddress, ethers.parseUnits(amount.toString(), 18).toString()],
         to: this.getProtocolContract(token),
@@ -253,56 +246,56 @@ export class EthereumProtocol {
 
       const txHash = await chainSignatureService.executeCrossChainTx(request);
       
-      logger.info(`Ethereum withdraw executed via chain signatures: ${amount} ${token} for ${walletAddress}`);
+      logger.info(`Polygon withdraw executed via chain signatures: ${amount} ${token} for ${walletAddress}`);
       
       return {
         hash: txHash,
-        gasUsed: 150000
+        gasUsed: 100000
       };
     } catch (error) {
-      logger.error(`Error executing withdraw on Ethereum:`, error);
+      logger.error(`Error executing withdraw on Polygon:`, error);
       throw error;
     }
   }
 
   async deposit(walletAddress: string, token: string, amount: number): Promise<{ hash: string; gasUsed?: number }> {
     if (!this.isInitialized || !this.signer) {
-      throw new Error('Ethereum Protocol not initialized or no signer available');
+      throw new Error('Polygon Protocol not initialized or no signer available');
     }
 
     try {
       // Use chain signature service for cross-chain deposit
       const request: ChainSignatureRequest = {
-        chain: 'ethereum',
+        chain: 'polygon',
         method: 'deposit',
         params: [walletAddress, ethers.parseUnits(amount.toString(), 18).toString()],
         to: this.getProtocolContract(token),
-        value: token === 'ETH' ? ethers.parseEther(amount.toString()).toString() : '0'
+        value: token === 'MATIC' ? ethers.parseEther(amount.toString()).toString() : '0'
       };
 
       const txHash = await chainSignatureService.executeCrossChainTx(request);
       
-      logger.info(`Ethereum deposit executed via chain signatures: ${amount} ${token} for ${walletAddress}`);
+      logger.info(`Polygon deposit executed via chain signatures: ${amount} ${token} for ${walletAddress}`);
       
       return {
         hash: txHash,
-        gasUsed: 200000
+        gasUsed: 120000
       };
     } catch (error) {
-      logger.error(`Error executing deposit on Ethereum:`, error);
+      logger.error(`Error executing deposit on Polygon:`, error);
       throw error;
     }
   }
 
   async swap(walletAddress: string, token: string, amount: number, slippage?: number): Promise<{ hash: string; gasUsed?: number }> {
     if (!this.isInitialized || !this.signer) {
-      throw new Error('Ethereum Protocol not initialized or no signer available');
+      throw new Error('Polygon Protocol not initialized or no signer available');
     }
 
     try {
       // Use chain signature service for cross-chain swap
       const request: ChainSignatureRequest = {
-        chain: 'ethereum',
+        chain: 'polygon',
         method: 'swapExactTokensForTokens',
         params: [
           ethers.parseUnits(amount.toString(), 18).toString(),
@@ -311,34 +304,33 @@ export class EthereumProtocol {
           walletAddress,
           Math.floor(Date.now() / 1000) + 3600 // Deadline
         ],
-        to: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', // Uniswap V2 Router
+        to: '0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff', // QuickSwap Router
         value: '0'
       };
 
       const txHash = await chainSignatureService.executeCrossChainTx(request);
       
-      logger.info(`Ethereum swap executed via chain signatures: ${amount} ${token} for ${walletAddress} with ${slippage}% slippage`);
+      logger.info(`Polygon swap executed via chain signatures: ${amount} ${token} for ${walletAddress} with ${slippage}% slippage`);
       
       return {
         hash: txHash,
-        gasUsed: 180000
+        gasUsed: 150000
       };
     } catch (error) {
-      logger.error(`Error executing swap on Ethereum:`, error);
+      logger.error(`Error executing swap on Polygon:`, error);
       throw error;
     }
   }
 
   async migrate(walletAddress: string, fromProtocol: string, toProtocol: string, amount: number): Promise<{ hash: string; gasUsed?: number }> {
     if (!this.isInitialized || !this.signer) {
-      throw new Error('Ethereum Protocol not initialized or no signer available');
+      throw new Error('Polygon Protocol not initialized or no signer available');
     }
 
     try {
       // Migration involves withdraw from one protocol and deposit to another
-      // This would be handled by a smart contract in production
       const request: ChainSignatureRequest = {
-        chain: 'ethereum',
+        chain: 'polygon',
         method: 'migrate',
         params: [fromProtocol, toProtocol, ethers.parseUnits(amount.toString(), 18).toString()],
         to: walletAddress, // Migration contract address
@@ -347,32 +339,32 @@ export class EthereumProtocol {
 
       const txHash = await chainSignatureService.executeCrossChainTx(request);
       
-      logger.info(`Ethereum migration executed via chain signatures: ${amount} from ${fromProtocol} to ${toProtocol} for ${walletAddress}`);
+      logger.info(`Polygon migration executed via chain signatures: ${amount} from ${fromProtocol} to ${toProtocol} for ${walletAddress}`);
       
       return {
         hash: txHash,
-        gasUsed: 250000
+        gasUsed: 200000
       };
     } catch (error) {
-      logger.error(`Error executing migration on Ethereum:`, error);
+      logger.error(`Error executing migration on Polygon:`, error);
       throw error;
     }
   }
 
   async waitForTransaction(txHash: string): Promise<void> {
     if (!this.isInitialized || !this.provider) {
-      throw new Error('Ethereum Protocol not initialized');
+      throw new Error('Polygon Protocol not initialized');
     }
 
     try {
-      logger.info(`Waiting for Ethereum transaction: ${txHash}`);
+      logger.info(`Waiting for Polygon transaction: ${txHash}`);
       const receipt = await this.provider.waitForTransaction(txHash);
       if (receipt?.status === 0) {
         throw new Error('Transaction failed');
       }
       logger.info(`Transaction confirmed: ${txHash}`);
     } catch (error) {
-      logger.error(`Error waiting for Ethereum transaction ${txHash}:`, error);
+      logger.error(`Error waiting for Polygon transaction ${txHash}:`, error);
       throw error;
     }
   }
@@ -383,27 +375,82 @@ export class EthereumProtocol {
         return false;
       }
 
-      // Simple health check - get latest block number
       const blockNumber = await this.provider.getBlockNumber();
       return blockNumber > 0;
     } catch (error) {
-      logger.error('Ethereum Protocol health check failed:', error);
+      logger.error('Polygon Protocol health check failed:', error);
       return false;
     }
   }
 
-  private async getAaveOpportunities(): Promise<YieldOpportunity[]> {
+  private getProtocolContract(token: string): string {
+    // Map tokens to their respective protocol contracts
+    const contracts: Record<string, string> = {
+      'QUICK': '0x831753DD7087CaC61aB5644b308642cc1c33Dc13', // QuickSwap
+      'AAVE': '0xD6DF932A45C0f255f85145f286eA0b292B21C90B', // Aave
+      'CRV': '0x172370d5Cd63279eFa6d502DAB29171933a610AF', // Curve
+      'QI': '0x580A84C73811E1839F75d86d75d88cCa0c241fF4', // QiDao
+    };
+    return contracts[token] || '0x0000000000000000000000000000000000000000';
+  }
+
+  private async getQuickSwapOpportunities(): Promise<YieldOpportunity[]> {
     try {
-      // Mock Aave opportunities
       return [
         {
-          id: 'aave_usdc_lending',
+          id: 'quickswap_matic_usdc',
+          protocol: 'quickswap',
+          chain: 'polygon',
+          poolId: 'matic_usdc',
+          token: 'MATIC-USDC',
+          apy: 14.5,
+          tvl: 120000000,
+          riskScore: 5,
+          minDeposit: 10,
+          fees: { deposit: 0, withdraw: 0, management: 0 },
+          metadata: {
+            poolType: 'liquidity',
+            underlying: ['MATIC', 'USDC'],
+            autoCompound: false
+          },
+          lastUpdated: new Date()
+        },
+        {
+          id: 'quickswap_weth_usdc',
+          protocol: 'quickswap',
+          chain: 'polygon',
+          poolId: 'weth_usdc',
+          token: 'WETH-USDC',
+          apy: 16.8,
+          tvl: 80000000,
+          riskScore: 6,
+          minDeposit: 50,
+          fees: { deposit: 0, withdraw: 0, management: 0 },
+          metadata: {
+            poolType: 'liquidity',
+            underlying: ['WETH', 'USDC'],
+            autoCompound: false
+          },
+          lastUpdated: new Date()
+        }
+      ];
+    } catch (error) {
+      logger.error('Error fetching QuickSwap opportunities:', error);
+      return [];
+    }
+  }
+
+  private async getAavePolygonOpportunities(): Promise<YieldOpportunity[]> {
+    try {
+      return [
+        {
+          id: 'aave_polygon_usdc',
           protocol: 'aave-v3',
-          chain: 'ethereum',
+          chain: 'polygon',
           poolId: 'usdc',
           token: 'USDC',
-          apy: 4.2,
-          tvl: 800000000,
+          apy: 5.2,
+          tvl: 300000000,
           riskScore: 2,
           minDeposit: 1,
           fees: { deposit: 0, withdraw: 0, management: 0 },
@@ -414,152 +461,82 @@ export class EthereumProtocol {
           lastUpdated: new Date()
         },
         {
-          id: 'aave_eth_lending',
+          id: 'aave_polygon_matic',
           protocol: 'aave-v3',
-          chain: 'ethereum',
-          poolId: 'weth',
-          token: 'WETH',
-          apy: 2.8,
-          tvl: 1200000000,
-          riskScore: 2,
-          minDeposit: 0.001,
-          fees: { deposit: 0, withdraw: 0, management: 0 },
-          metadata: {
-            poolType: 'lending',
-            autoCompound: false
-          },
-          lastUpdated: new Date()
-        }
-      ];
-    } catch (error) {
-      logger.error('Error fetching Aave opportunities:', error);
-      return [];
-    }
-  }
-
-  private async getCompoundOpportunities(): Promise<YieldOpportunity[]> {
-    try {
-      // Mock Compound opportunities
-      return [
-        {
-          id: 'compound_usdc_lending',
-          protocol: 'compound-v3',
-          chain: 'ethereum',
-          poolId: 'cusdc',
-          token: 'USDC',
+          chain: 'polygon',
+          poolId: 'matic',
+          token: 'MATIC',
           apy: 3.8,
-          tvl: 600000000,
-          riskScore: 3,
-          minDeposit: 1,
+          tvl: 200000000,
+          riskScore: 2,
+          minDeposit: 10,
           fees: { deposit: 0, withdraw: 0, management: 0 },
           metadata: {
             poolType: 'lending',
-            autoCompound: true
-          },
-          lastUpdated: new Date()
-        }
-      ];
-    } catch (error) {
-      logger.error('Error fetching Compound opportunities:', error);
-      return [];
-    }
-  }
-
-  private async getUniswapOpportunities(): Promise<YieldOpportunity[]> {
-    try {
-      // Mock Uniswap V3 LP opportunities
-      return [
-        {
-          id: 'uniswap_usdc_eth',
-          protocol: 'uniswap-v3',
-          chain: 'ethereum',
-          poolId: 'usdc_weth_0.05',
-          token: 'USDC-WETH',
-          apy: 12.5,
-          tvl: 300000000,
-          riskScore: 6,
-          minDeposit: 100,
-          fees: { deposit: 0, withdraw: 0, management: 0 },
-          metadata: {
-            poolType: 'liquidity',
-            underlying: ['USDC', 'WETH'],
             autoCompound: false
           },
           lastUpdated: new Date()
         }
       ];
     } catch (error) {
-      logger.error('Error fetching Uniswap opportunities:', error);
+      logger.error('Error fetching Aave Polygon opportunities:', error);
       return [];
     }
   }
 
-  private async getCurveOpportunities(): Promise<YieldOpportunity[]> {
+  private async getCurvePolygonOpportunities(): Promise<YieldOpportunity[]> {
     try {
-      // Mock Curve opportunities
       return [
         {
-          id: 'curve_3pool',
+          id: 'curve_aave_3pool',
           protocol: 'curve',
-          chain: 'ethereum',
-          poolId: '3pool',
-          token: '3CRV',
-          apy: 6.8,
-          tvl: 200000000,
+          chain: 'polygon',
+          poolId: 'aave_3pool',
+          token: 'am3CRV',
+          apy: 7.5,
+          tvl: 150000000,
           riskScore: 3,
           minDeposit: 10,
           fees: { deposit: 0, withdraw: 0.0004, management: 0 },
           metadata: {
             poolType: 'stableswap',
-            underlying: ['USDC', 'USDT', 'DAI'],
-            autoCompound: false
-          },
-          lastUpdated: new Date()
-        }
-      ];
-    } catch (error) {
-      logger.error('Error fetching Curve opportunities:', error);
-      return [];
-    }
-  }
-
-  private async getLidoOpportunities(): Promise<YieldOpportunity[]> {
-    try {
-      // Mock Lido staking opportunities
-      return [
-        {
-          id: 'lido_eth_staking',
-          protocol: 'lido',
-          chain: 'ethereum',
-          poolId: 'steth',
-          token: 'ETH',
-          apy: 3.2,
-          tvl: 15000000000,
-          riskScore: 4,
-          minDeposit: 0.001,
-          fees: { deposit: 0, withdraw: 0, management: 0.1 },
-          metadata: {
-            poolType: 'staking',
+            underlying: ['DAI', 'USDC', 'USDT'],
             autoCompound: true
           },
           lastUpdated: new Date()
         }
       ];
     } catch (error) {
-      logger.error('Error fetching Lido opportunities:', error);
+      logger.error('Error fetching Curve Polygon opportunities:', error);
       return [];
     }
   }
 
-  private getProtocolContract(token: string): string {
-    // Map tokens to their respective protocol contracts
-    const contracts: Record<string, string> = {
-      'AAVE': '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9', // Aave
-      'COMP': '0xc00e94Cb662C3520282E6f5717214004A7f26888', // Compound
-      'UNI': '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984', // Uniswap
-      'CRV': '0xD533a949740bb3306d119CC777fa900bA034cd52', // Curve
-      'LIDO': '0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32', // Lido
-    };
-    return contracts[token] || '0x0000000000000000000000000000000000000000';
+  private async getQiDaoOpportunities(): Promise<YieldOpportunity[]> {
+    try {
+      return [
+        {
+          id: 'qidao_mai_stable',
+          protocol: 'qidao',
+          chain: 'polygon',
+          poolId: 'mai_vault',
+          token: 'MAI',
+          apy: 9.2,
+          tvl: 50000000,
+          riskScore: 4,
+          minDeposit: 100,
+          fees: { deposit: 0, withdraw: 0.005, management: 0.002 },
+          metadata: {
+            poolType: 'stable-vault',
+            autoCompound: true,
+            collateralRatio: 130
+          },
+          lastUpdated: new Date()
+        }
+      ];
+    } catch (error) {
+      logger.error('Error fetching QiDao opportunities:', error);
+      return [];
+    }
   }
 }

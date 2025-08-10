@@ -1,13 +1,15 @@
 import { EventEmitter } from 'events';
 import { NearProtocol } from '../protocols/NearProtocol';
 import { EthereumProtocol } from '../protocols/EthereumProtocol';
+import { BSCProtocol } from '../protocols/BSCProtocol';
+import { PolygonProtocol } from '../protocols/PolygonProtocol';
 import { logger } from '../utils/logger';
 import { CacheManager } from '../utils/CacheManager';
 
 export interface Position {
   id: string;
   walletAddress: string;
-  chain: 'near' | 'ethereum';
+  chain: 'near' | 'ethereum' | 'bsc' | 'polygon';
   protocol: string;
   positionType: 'lending' | 'liquidity' | 'staking' | 'farming';
   tokenAddress: string;
@@ -88,6 +90,8 @@ export interface RiskAnalysis {
 export class PositionTrackingService extends EventEmitter {
   private nearProtocol: NearProtocol;
   private ethereumProtocol: EthereumProtocol;
+  private bscProtocol: BSCProtocol;
+  private polygonProtocol: PolygonProtocol;
   private cache: CacheManager;
   private trackingInterval?: NodeJS.Timeout;
   private positions: Map<string, Position[]> = new Map(); // walletAddress -> positions
@@ -96,6 +100,8 @@ export class PositionTrackingService extends EventEmitter {
     super();
     this.nearProtocol = new NearProtocol();
     this.ethereumProtocol = new EthereumProtocol();
+    this.bscProtocol = new BSCProtocol();
+    this.polygonProtocol = new PolygonProtocol();
     this.cache = new CacheManager('position-tracking');
   }
 
@@ -105,6 +111,8 @@ export class PositionTrackingService extends EventEmitter {
       
       await this.nearProtocol.initialize();
       await this.ethereumProtocol.initialize();
+      await this.bscProtocol.initialize();
+      await this.polygonProtocol.initialize();
       
       // Load existing positions from storage
       await this.loadPositions();
@@ -136,6 +144,8 @@ export class PositionTrackingService extends EventEmitter {
     
     await this.nearProtocol.shutdown();
     await this.ethereumProtocol.shutdown();
+    await this.bscProtocol.shutdown();
+    await this.polygonProtocol.shutdown();
     
     logger.info('Position Tracking Service shut down');
   }
@@ -292,7 +302,7 @@ export class PositionTrackingService extends EventEmitter {
 
   async trackPosition(positionConfig: {
     walletAddress: string;
-    chain: 'near' | 'ethereum';
+    chain: 'near' | 'ethereum' | 'bsc' | 'polygon';
     protocol: string;
     positionType: 'lending' | 'liquidity' | 'staking' | 'farming';
     tokenAddress: string;
