@@ -5,10 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowUpRight, TrendingUp, Shield, Zap, DollarSign, Activity, Layers } from 'lucide-react';
+import { ArrowUpRight, TrendingUp, Shield, Zap, DollarSign, Activity, Layers, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { NearWalletConnect } from '@/components/wallet/near-connect';
 import { useDefiFlow } from '@/lib/hooks/use-defiflow';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function DeFiFlowDashboard() {
   const { 
@@ -21,6 +22,8 @@ export default function DeFiFlowDashboard() {
     executeRecommendation 
   } = useDefiFlow();
   
+  const [selectedRecommendation, setSelectedRecommendation] = useState<string | null>(null);
+  const [executing, setExecuting] = useState(false);
   const [stats, setStats] = useState({
     totalValue: 0,
     averageApy: 0,
@@ -80,6 +83,50 @@ export default function DeFiFlowDashboard() {
     };
     return colors[chain] || 'bg-gray-500';
   };
+
+  const handleExecuteRecommendation = async (recId: string) => {
+    setExecuting(true);
+    setSelectedRecommendation(recId);
+    try {
+      await executeRecommendation(recId);
+      // Show success message
+    } catch (err) {
+      console.error('Failed to execute recommendation:', err);
+    } finally {
+      setExecuting(false);
+      setSelectedRecommendation(null);
+    }
+  };
+
+  // Show connection error if backend is not running
+  // if (error && !loading) {
+  //   console.log(error);
+  //   return (
+  //     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+  //       <Card className="max-w-md w-full">
+  //         <CardHeader>
+  //           <CardTitle className="text-red-600">Connection Error</CardTitle>
+  //           <CardDescription>Unable to connect to DeFiFlow Agent</CardDescription>
+  //         </CardHeader>
+  //         <CardContent className="space-y-4">
+  //           <Alert>
+  //             <AlertCircle className="h-4 w-4" />
+  //             <AlertDescription>
+  //             Please ensure the DeFiFlow Agent API is running at {process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3140'}. Follow these steps to start the API:
+  //             </AlertDescription>
+  //           </Alert>
+  //           <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg">
+  //             <p className="text-sm font-mono">cd defiflow-agent</p>
+  //             <p className="text-sm font-mono">npm run dev</p>
+  //           </div>
+  //           <Button onClick={() => window.location.reload()} className="w-full">
+  //             Retry Connection
+  //           </Button>
+  //         </CardContent>
+  //       </Card>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
@@ -383,8 +430,20 @@ export default function DeFiFlowDashboard() {
                             <p>Expected APY gain: <span className="font-semibold text-green-600">+{formatAPY(rec.expectedGains?.apyIncrease || 0)}</span></p>
                             <p>Confidence: <span className="font-semibold">{rec.confidence || 0}%</span></p>
                           </div>
-                          <Button size="sm" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-                            Execute
+                          <Button 
+                            size="sm" 
+                            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                            onClick={() => handleExecuteRecommendation(rec.id)}
+                            disabled={executing && selectedRecommendation === rec.id}
+                          >
+                            {executing && selectedRecommendation === rec.id ? (
+                              <>
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2" />
+                                Executing...
+                              </>
+                            ) : (
+                              'Execute'
+                            )}
                           </Button>
                         </div>
                       </motion.div>
