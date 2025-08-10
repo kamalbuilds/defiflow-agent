@@ -5,6 +5,27 @@ import type { AppBindings } from '../types/hono';
 
 const agentStatusRoutes = new Hono<AppBindings>();
 
+// Root status endpoint (for /status)
+agentStatusRoutes.get('/', async (c) => {
+  try {
+    const isConnected = true; // For demo purposes
+    const contractId = process.env.CONTRACT_ID || 'defiflow.testnet';
+    
+    return c.json({
+      isConnected,
+      contractId,
+      nearAccount: 'agent.defiflow.testnet',
+      lastSync: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error fetching agent status:', error);
+    return c.json({ 
+      isConnected: false,
+      error: 'Failed to fetch agent status' 
+    }, 500);
+  }
+});
+
 agentStatusRoutes.get('/status', async (c) => {
   try {
     const accountId = await agentAccountId();

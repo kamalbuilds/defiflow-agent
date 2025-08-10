@@ -26,7 +26,7 @@ const app = new Hono<AppBindings>();
 // Global middleware
 app.use('*', logger());
 app.use('*', cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3001'],
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3005'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
 }));
@@ -44,12 +44,19 @@ app.use('*', async (c, next) => {
   await next();
 });
 
-// Routes
-app.route('/api/yield', yieldMonitor);  // Use yieldMonitor instead of yieldRoutes for the monitor endpoints
+// Routes with /api prefix
+app.route('/api/yield-monitor', yieldMonitor);
 app.route('/api/positions', positionsRoutes);
 app.route('/api/rebalance', rebalanceRoutes);
 app.route('/api/agent', agentStatusRoutes);
 app.route('/api/strategy', strategy);
+
+// Routes without /api prefix for backward compatibility
+app.route('/yield-monitor', yieldMonitor);
+app.route('/positions', positionsRoutes);
+app.route('/rebalance', rebalanceRoutes);
+app.route('/status', agentStatusRoutes);
+app.route('/strategy', strategy);
 app.route('/', healthRoutes);
 
 // Global error handler

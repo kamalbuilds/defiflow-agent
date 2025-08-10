@@ -4,6 +4,55 @@ import type { AppBindings } from '../types/hono';
 
 const positionsRoutes = new Hono<AppBindings>();
 
+// Get all positions (demo endpoint without wallet)
+positionsRoutes.get('/', async (c) => {
+  try {
+    const positionService = c.get('positionTrackingService') as PositionTrackingService;
+    
+    // For demo, return mock positions or empty array
+    const mockPositions = [
+      {
+        id: 'pos_1',
+        walletAddress: 'demo.near',
+        protocol: 'Ref Finance',
+        chain: 'near',
+        tokenSymbol: 'NEAR',
+        amount: 100,
+        value: 350,
+        apy: 12.5,
+        riskScore: 4
+      },
+      {
+        id: 'pos_2',
+        walletAddress: 'demo.near',
+        protocol: 'Uniswap V3',
+        chain: 'ethereum',
+        tokenSymbol: 'ETH',
+        amount: 0.5,
+        value: 1200,
+        apy: 8.2,
+        riskScore: 5
+      }
+    ];
+
+    return c.json({
+      success: true,
+      positions: mockPositions,
+      metadata: {
+        totalValue: mockPositions.reduce((sum, p) => sum + p.value, 0),
+        averageApy: mockPositions.reduce((sum, p) => sum + p.apy, 0) / mockPositions.length
+      }
+    });
+  } catch (error) {
+    console.error('Error getting positions:', error);
+    return c.json({
+      success: false,
+      error: 'Failed to fetch positions',
+      positions: []
+    }, 500);
+  }
+});
+
 // Get all positions for a wallet across chains
 positionsRoutes.get('/:walletAddress', async (c) => {
   try {

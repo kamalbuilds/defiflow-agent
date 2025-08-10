@@ -287,7 +287,7 @@ export class RebalancingService extends EventEmitter {
   }
 
   async getRebalanceHistory(walletAddress: string, limit: number = 50, offset: number = 0): Promise<RebalanceExecution[]> {
-    // In a real implementation, fetch from database
+    // In a real implementation, we will fetch from database
     // For now, return from memory
     const allExecutions = Array.from(this.executionQueue.values())
       .filter(exec => exec.walletAddress === walletAddress)
@@ -800,10 +800,10 @@ export class RebalancingService extends EventEmitter {
   }
 
   private async loadAutoRebalanceSettings(): Promise<void> {
-    // In a real implementation, load from database
+    // @TODO: load from database
   }
 
   private async saveAutoRebalanceSettings(): Promise<void> {
-    // In a real implementation, save to database
+    // @TODO: save to database
   }
 }

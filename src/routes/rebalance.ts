@@ -4,6 +4,79 @@ import type { AppBindings } from '../types/hono';
 
 const rebalanceRoutes = new Hono<AppBindings>();
 
+// Get rebalancing recommendations (demo endpoint without wallet)
+rebalanceRoutes.get('/recommendations', async (c) => {
+  try {
+    const rebalanceService = c.get('rebalancingService') as RebalancingService;
+    
+    // For demo, return mock recommendations
+    const mockRecommendations = [
+      {
+        id: 'rec_1',
+        walletAddress: 'demo.near',
+        strategy: 'yield_optimization',
+        urgency: 'high',
+        confidence: 85,
+        expectedGains: {
+          apyIncrease: 5.2,
+          valueIncrease: 150,
+          riskReduction: 0
+        },
+        actions: [{
+          type: 'rebalance',
+          fromProtocol: 'Uniswap V3',
+          toProtocol: 'Ref Finance',
+          fromChain: 'ethereum',
+          toChain: 'near',
+          token: 'USDC',
+          amount: 1000
+        }],
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
+      },
+      {
+        id: 'rec_2',
+        walletAddress: 'demo.near',
+        strategy: 'risk_reduction',
+        urgency: 'medium',
+        confidence: 72,
+        expectedGains: {
+          apyIncrease: -0.5,
+          valueIncrease: 0,
+          riskReduction: 2
+        },
+        actions: [{
+          type: 'withdraw',
+          fromProtocol: 'Aave',
+          toProtocol: 'Compound',
+          fromChain: 'polygon',
+          toChain: 'polygon',
+          token: 'MATIC',
+          amount: 500
+        }],
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
+      }
+    ];
+
+    return c.json({
+      success: true,
+      recommendations: mockRecommendations,
+      metadata: {
+        totalRecommendations: mockRecommendations.length,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('Error getting rebalance recommendations:', error);
+    return c.json({
+      success: false,
+      error: 'Failed to fetch recommendations',
+      recommendations: []
+    }, 500);
+  }
+});
+
 // Get rebalancing recommendations for a wallet
 rebalanceRoutes.get('/recommendations/:walletAddress', async (c) => {
   try {
