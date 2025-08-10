@@ -163,12 +163,24 @@ export class NearProtocol {
     }
 
     try {
-      // Mock market conditions - in production would query indexer
+      // Get real market conditions from Ref Finance
+      const { getRefFinanceStats, fetchRefFinanceYields } = await import('./near/ref');
+      
+      const [stats, yields] = await Promise.all([
+        getRefFinanceStats(),
+        fetchRefFinanceYields()
+      ]);
+      
+      // Calculate average APY from top pools
+      const averageApy = yields.length > 0 
+        ? yields.reduce((sum, y) => sum + y.apy, 0) / yields.length
+        : 8.5;
+      
       return {
-        gasPrice: 0.0001, // NEAR TGas price
-        blockTime: 1.2, // seconds
-        averageApy: 8.5,
-        totalTvl: 500000000 // $500M mock TVL
+        gasPrice: 0.0001, // NEAR TGas price (still static as it's network-specific)
+        blockTime: 1.2, // seconds (NEAR block time)
+        averageApy: averageApy,
+        totalTvl: stats.tvl || 500000000 // Use real TVL from Ref Finance
       };
     } catch (error) {
       logger.error('Error fetching NEAR market conditions:', error);
@@ -304,49 +316,68 @@ export class NearProtocol {
 
   private async getRefFinanceOpportunities(): Promise<YieldOpportunity[]> {
     try {
-      // Mock Ref Finance opportunities
-      return [
-        {
-          id: 'ref_usdc_near',
-          protocol: 'ref-finance',
-          chain: 'near',
-          poolId: 'pool_1',
-          token: 'USDC',
-          apy: 12.5,
-          tvl: 5000000,
-          riskScore: 4,
-          minDeposit: 10,
-          fees: { deposit: 0, withdraw: 0.003, management: 0.002 },
-          metadata: {
-            poolType: 'liquidity',
-            underlying: ['USDC', 'NEAR'],
-            autoCompound: true
-          },
-          lastUpdated: new Date()
+      // Import and use the real Ref Finance API
+      const { fetchRefFinanceYields } = await import('./near/ref');
+      const refYields = await fetchRefFinanceYields();
+      
+      // Map Ref Finance yields to YieldOpportunity format
+      return refYields.map(refYield => ({
+        id: `ref_${refYield.poolId}`,
+        protocol: 'ref-finance',
+        chain: 'near' as const,
+        poolId: refYield.poolId,
+        token: refYield.token0Symbol, // Primary token
+        apy: refYield.apy,
+        tvl: refYield.tvl,
+        riskScore: this.calculateRiskScore(refYield),
+        minDeposit: this.getMinDeposit(refYield.token0Symbol),
+        fees: { 
+          deposit: 0, 
+          withdraw: refYield.fee, 
+          management: 0 
         },
-        {
-          id: 'ref_weth_near',
-          protocol: 'ref-finance',
-          chain: 'near',
-          poolId: 'pool_2',
-          token: 'WETH',
-          apy: 15.8,
-          tvl: 3200000,
-          riskScore: 5,
-          minDeposit: 0.001,
-          fees: { deposit: 0, withdraw: 0.003, management: 0.002 },
-          metadata: {
-            poolType: 'liquidity',
-            underlying: ['WETH', 'NEAR'],
-            autoCompound: true
-          },
-          lastUpdated: new Date()
-        }
-      ];
+        metadata: {
+          poolType: 'liquidity',
+          underlying: [refYield.token0Symbol, refYield.token1Symbol],
+          autoCompound: refYield.farmAPR ? true : false,
+          volume24h: refYield.volume24h,
+          impermanentLoss: refYield.impermanentLoss
+        },
+        lastUpdated: new Date()
+      }));
     } catch (error) {
       logger.error('Error fetching Ref Finance opportunities:', error);
       return [];
     }
+  }
+
+  private calculateRiskScore(refYield: any): number {
+    // Calculate risk score based on TVL, APY, and impermanent loss
+    let score = 5; // Base score
+    
+    if (refYield.tvl > 10000000) score -= 1; // High TVL = lower risk
+    if (refYield.tvl > 50000000) score -= 1;
+    
+    if (refYield.apy > 50) score += 1; // Very high APY = higher risk
+    if (refYield.apy > 100) score += 1;
+    
+    if (refYield.impermanentLoss < 2) score -= 1; // Low IL = lower risk
+    if (refYield.impermanentLoss > 5) score += 1; // High IL = higher risk
+    
+    return Math.max(1, Math.min(10, score)); // Clamp between 1-10
+  }
+
+  private getMinDeposit(tokenSymbol: string): number {
+    const minDeposits: Record<string, number> = {
+      'NEAR': 1,
+      'USDT': 10,
+      'USDC': 10,
+      'wETH': 0.001,
+      'wBTC': 0.0001,
+      'DAI': 10
+    };
+    
+    return minDeposits[tokenSymbol] || 1;
   }
 
   private async getBurrowOpportunities(): Promise<YieldOpportunity[]> {

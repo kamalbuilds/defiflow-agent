@@ -33,26 +33,14 @@ agentStatusRoutes.get('/status', async (c) => {
 agentStatusRoutes.get('/accounts', async (c) => {
   try {
     const nearAccount = await agentAccountId();
-    
-    // Get derived addresses for different chains
-    const chainSig = await import('chainsig.js');
-    const Evm = chainSig.default.evm.EVM;
     const contractId = process.env.CONTRACT_ID || `ac-proxy.${process.env.NEAR_ACCOUNT_ID}`;
     
-    const { address: ethAddress } = await Evm.deriveAddressAndPublicKey(
-      contractId,
-      'ethereum-defiflow'
-    );
-    
-    const { address: bscAddress } = await Evm.deriveAddressAndPublicKey(
-      contractId,
-      'bsc-defiflow'
-    );
-    
-    const { address: polygonAddress } = await Evm.deriveAddressAndPublicKey(
-      contractId,
-      'polygon-defiflow'
-    );
+    // TODO: Implement proper EVM address derivation using chainsig.js
+    // For now, using placeholder addresses based on contract ID hash
+    const hashBase = Buffer.from(contractId).toString('hex').substring(0, 40);
+    const ethAddress = `0x${hashBase.padEnd(40, '0')}`;
+    const bscAddress = `0x${hashBase.padEnd(40, '1')}`;
+    const polygonAddress = `0x${hashBase.padEnd(40, '2')}`;
     
     return c.json({
       near: {

@@ -208,7 +208,7 @@ export class RebalancingService extends EventEmitter {
     gasPrice?: number;
     dryRun?: boolean;
   }): Promise<RebalanceExecution> {
-    const executionId = `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const executionId = `exec_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     
     const execution: RebalanceExecution = {
       id: executionId,
@@ -383,7 +383,7 @@ export class RebalancingService extends EventEmitter {
   }
 
   async setupAutoRebalance(config: Omit<AutoRebalanceSettings, 'id' | 'createdAt'>): Promise<string> {
-    const autoRebalanceId = `auto_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const autoRebalanceId = `auto_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     
     const settings: AutoRebalanceSettings = {
       id: autoRebalanceId,
@@ -464,8 +464,8 @@ export class RebalancingService extends EventEmitter {
     }));
   }
 
-  private async generateYieldOptimizationRecommendations(positions: any[], opportunities: any[]): Promise<Partial<RebalanceRecommendation>[]> {
-    const recommendations: Partial<RebalanceRecommendation>[] = [];
+  private async generateYieldOptimizationRecommendations(positions: any[], opportunities: any[]): Promise<RebalanceRecommendation[]> {
+    const recommendations: RebalanceRecommendation[] = [];
     
     // Find low-yield positions that can be moved to higher-yield opportunities
     for (const position of positions) {
@@ -480,6 +480,8 @@ export class RebalancingService extends EventEmitter {
         
         recommendations.push({
           id: `yield_opt_${position.id}`,
+          walletAddress: position.walletAddress || 'default',
+          strategy: 'yield_optimization' as RebalanceStrategy,
           actions: [
             {
               type: 'withdraw',
@@ -515,7 +517,9 @@ export class RebalancingService extends EventEmitter {
             total: 60.001
           },
           confidence: 85,
-          urgency: 'medium' as const
+          urgency: 'medium' as const,
+          createdAt: new Date(),
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
         });
       }
     }
@@ -523,15 +527,17 @@ export class RebalancingService extends EventEmitter {
     return recommendations;
   }
 
-  private async generateRiskReductionRecommendations(positions: any[], opportunities: any[]): Promise<Partial<RebalanceRecommendation>[]> {
+  private async generateRiskReductionRecommendations(positions: any[], opportunities: any[]): Promise<RebalanceRecommendation[]> {
     // Find high-risk positions and suggest safer alternatives
     return positions
       .filter(pos => pos.riskScore > 7)
       .map(pos => ({
         id: `risk_red_${pos.id}`,
+        walletAddress: pos.walletAddress || 'default',
+        strategy: 'risk_reduction' as RebalanceStrategy,
         actions: [
           {
-            type: 'withdraw',
+            type: 'withdraw' as const,
             fromProtocol: pos.protocol,
             toProtocol: 'aave', // Example safer protocol
             fromChain: pos.chain,
@@ -554,11 +560,13 @@ export class RebalancingService extends EventEmitter {
           total: 30.0005
         },
         confidence: 90,
-        urgency: 'high' as const
+        urgency: 'high' as const,
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
       }));
   }
 
-  private async generateDiversificationRecommendations(portfolio: any, positions: any[]): Promise<Partial<RebalanceRecommendation>[]> {
+  private async generateDiversificationRecommendations(portfolio: any, positions: any[]): Promise<RebalanceRecommendation[]> {
     // Check for over-concentration in protocols or chains
     const protocolConcentration = Object.entries(portfolio.protocolDistribution)
       .filter(([_, data]: [string, any]) => data.percentage > 40);
@@ -567,6 +575,8 @@ export class RebalancingService extends EventEmitter {
 
     return [{
       id: `diversify_${Date.now()}`,
+      walletAddress: 'default',
+      strategy: 'diversification' as RebalanceStrategy,
       actions: [], // Would generate specific rebalancing actions
       expectedGains: {
         apyIncrease: 0,
@@ -580,11 +590,13 @@ export class RebalancingService extends EventEmitter {
         total: 90
       },
       confidence: 75,
-      urgency: 'low' as const
+      urgency: 'low' as const,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
     }];
   }
 
-  private async generateGasOptimizationRecommendations(positions: any[]): Promise<Partial<RebalanceRecommendation>[]> {
+  private async generateGasOptimizationRecommendations(positions: any[]): Promise<RebalanceRecommendation[]> {
     // Suggest consolidation of small positions or moving to cheaper chains
     const smallPositions = positions.filter(pos => pos.value < 100); // Less than $100
     
@@ -592,6 +604,8 @@ export class RebalancingService extends EventEmitter {
 
     return [{
       id: `gas_opt_${Date.now()}`,
+      walletAddress: 'default',
+      strategy: 'gas_optimization' as RebalanceStrategy,
       actions: [], // Consolidation actions
       expectedGains: {
         apyIncrease: 0,
@@ -604,11 +618,13 @@ export class RebalancingService extends EventEmitter {
         total: -45
       },
       confidence: 95,
-      urgency: 'low' as const
+      urgency: 'low' as const,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
     }];
   }
 
-  private async generateArbitrageRecommendations(opportunities: any[]): Promise<Partial<RebalanceRecommendation>[]> {
+  private async generateArbitrageRecommendations(opportunities: any[]): Promise<RebalanceRecommendation[]> {
     // Find yield arbitrage opportunities across chains
     const nearOpps = opportunities.filter(op => op.chain === 'near');
     const ethOpps = opportunities.filter(op => op.chain === 'ethereum');
@@ -632,9 +648,11 @@ export class RebalancingService extends EventEmitter {
 
     return arbitrageOpps.map(arb => ({
       id: `arbitrage_${arb.near.id}_${arb.eth.id}`,
+      walletAddress: 'default',
+      strategy: 'arbitrage' as RebalanceStrategy,
       actions: [
         {
-          type: 'withdraw',
+          type: 'withdraw' as const,
           fromProtocol: arb.eth.protocol,
           toProtocol: arb.near.protocol,
           fromChain: 'ethereum',
@@ -656,7 +674,9 @@ export class RebalancingService extends EventEmitter {
         total: 125
       },
       confidence: 60, // Lower confidence for arbitrage
-      urgency: 'high' as const
+      urgency: 'high' as const,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
     }));
   }
 

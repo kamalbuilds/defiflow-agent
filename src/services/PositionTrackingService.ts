@@ -197,7 +197,7 @@ export class PositionTrackingService extends EventEmitter {
         value: position.value * valueVariation,
         apy: position.apy * apyVariation,
         pnl: position.pnl * valueVariation,
-        rewards: position.rewards?.reduce((sum, r) => sum + r.value, 0) * valueVariation || 0
+        rewards: (position.rewards?.reduce((sum, r) => sum + r.value, 0) || 0) * valueVariation
       });
     }
 
@@ -299,7 +299,7 @@ export class PositionTrackingService extends EventEmitter {
     amount: number;
     metadata?: any;
   }): Promise<string> {
-    const positionId = `pos_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const positionId = `pos_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     
     try {
       // Fetch current position data from blockchain

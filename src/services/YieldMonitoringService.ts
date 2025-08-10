@@ -146,8 +146,8 @@ export class YieldMonitoringService extends EventEmitter {
       );
     }
 
-    if (filters.minApy) {
-      opportunities = opportunities.filter(op => op.apy >= filters.minApy);
+    if (filters.minApy !== undefined) {
+      opportunities = opportunities.filter(op => op.apy >= filters.minApy!);
     }
 
     if (filters.protocol) {
@@ -225,7 +225,7 @@ export class YieldMonitoringService extends EventEmitter {
   }
 
   async createYieldAlert(alertConfig: Omit<YieldAlert, 'id' | 'isActive' | 'createdAt'>): Promise<string> {
-    const alertId = `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const alertId = `alert_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     
     const alert: YieldAlert = {
       id: alertId,

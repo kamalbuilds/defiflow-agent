@@ -3,7 +3,6 @@ import { YieldOpportunity } from '../types/yield';
 import { fetchUniswapV3Yields } from '../protocols/ethereum/uniswap';
 import { fetchAaveYields } from '../protocols/ethereum/aave';
 import { fetchRefFinanceYields } from '../protocols/near/ref';
-import { fetchBurrowYields } from '../protocols/near/burrow';
 import type { AppBindings } from '../types/hono';
 
 const app = new Hono<AppBindings>();
@@ -23,11 +22,10 @@ app.get('/monitor', async (c) => {
     const opportunities: YieldData[] = [];
     
     // Fetch yields from different protocols in parallel
-    const [uniswapYields, aaveYields, refYields, burrowYields] = await Promise.allSettled([
+    const [uniswapYields, aaveYields, refYields] = await Promise.allSettled([
       fetchUniswapV3Yields(),
       fetchAaveYields(),
-      fetchRefFinanceYields(),
-      fetchBurrowYields()
+      fetchRefFinanceYields()
     ]);
     
     // Process Uniswap yields
@@ -43,11 +41,6 @@ app.get('/monitor', async (c) => {
     // Process Ref Finance yields
     if (refYields.status === 'fulfilled') {
       opportunities.push(...refYields.value);
-    }
-    
-    // Process Burrow yields
-    if (burrowYields.status === 'fulfilled') {
-      opportunities.push(...burrowYields.value);
     }
     
     // Sort by APY descending

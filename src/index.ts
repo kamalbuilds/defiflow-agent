@@ -6,10 +6,12 @@ import dotenv from 'dotenv';
 import type { AppBindings } from './types/hono';
 
 // Import routes
-import { yieldRoutes } from './routes/yield';
 import { positionsRoutes } from './routes/positions';
 import { rebalanceRoutes } from './routes/rebalance';
 import { healthRoutes } from './routes/health';
+import { agentStatusRoutes } from './routes/agentStatus';
+import { yieldMonitor } from './routes/yieldMonitor';
+import { strategy } from './routes/strategy';
 
 // Import services
 import { YieldMonitoringService } from './services/YieldMonitoringService';
@@ -43,9 +45,11 @@ app.use('*', async (c, next) => {
 });
 
 // Routes
-app.route('/api/yield', yieldRoutes);
+app.route('/api/yield', yieldMonitor);  // Use yieldMonitor instead of yieldRoutes for the monitor endpoints
 app.route('/api/positions', positionsRoutes);
 app.route('/api/rebalance', rebalanceRoutes);
+app.route('/api/agent', agentStatusRoutes);
+app.route('/api/strategy', strategy);
 app.route('/', healthRoutes);
 
 // Global error handler
